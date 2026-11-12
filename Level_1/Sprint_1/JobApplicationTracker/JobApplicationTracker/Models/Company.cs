@@ -4,19 +4,18 @@ using System.Text;
 
 namespace JobApplicationTracker.Models
 {
-    internal record Company (string Name, string Industry = "", string City = "", CompanyStatus Status = CompanyStatus.Pending)
+    internal class Company : IEntity
     {
-        private static int _idCounter = 0;
-        public int Id { get; } = ++_idCounter;
-        public string Name { get; set; } = Name;
-        public string Industry { get; set; } = Industry;
-        public string City { get; set; } = City;
-        public CompanyStatus Status { get; set; } = Status;
+        public int Id { get; set; }
+        public required string Name { get; set; }
+        public string Industry { get; set; } = "";
+        public string City { get; set; } = "";
+        public CompanyStatus Status { get; set; }
     }
-    enum CompanyStatus
+    public enum CompanyStatus
     {
         Pending,
         Approved,
-        Rejected
+        Rejected,
     }
 }
