@@ -8,5 +8,152 @@ namespace JobApplicationTracker.Services
     internal class CandidateService
     {
         public readonly List<Candidate> Candidates = [];
+
+        public void AddCandidate()
+        {
+            Console.Clear();
+            Console.WriteLine("========== Create New Candidate ==========");
+
+            string fullName = Helper.UpdateEntityData("1] Candidate Full Name (req): ", () => Validator.StringValidation("Candidate Name (req): ", @"^[a-zA-Z.][ a-zA-Z0-9.]{2,20}$"));
+
+            string email = Helper.UpdateEntityData("2] Email: ", () => Validator.StringValidation("Email: ", Validator.EmailPattern));
+
+            CheckUniquenessOfEmail(email);
+
+            string phone = Helper.UpdateEntityData("3] Phone no: ", () => Validator.StringValidation("Phone no: ", @"^(?:(?:\+20|0020|0)1\d{8})?$"));
+            
+            int years = Helper.UpdateEntityData("4] Years of Experience: ", () => Validator.IntValidation("Years of Experience: ", 0, 40));
+
+            Candidate candidate = new() { Id = Candidates[^1].Id + 1, FullName = fullName, Email = email, Phone = phone, YearsOfExperience = years };
+
+            PrintCandidate(candidate);
+            Candidates.Add(candidate);
+
+            Helper.PreviousMenu("Candidate Added Successfully ", Program.CandidateMenu);
+        }
+
+        public void UpdateCandidate()
+        {
+            int candidateId = Validator.IntValidation("Candidate ID: ", 1);
+
+            Candidate? oldCandidate = null;
+            foreach (var candidate in Candidates)
+            {
+                if (candidate.Id == candidateId)
+                {
+                    oldCandidate = candidate;
+                    break;
+                }
+            }
+
+            // this loop will continue running until user chose to back to previous menu
+            while (oldCandidate is not null)
+            {
+                Console.Clear();
+                Console.WriteLine("============= Update Candidate =============");
+
+                PrintCandidate(oldCandidate);
+
+                Console.WriteLine("1] Update Name\n" +
+                                  "2] Update Email\n" +
+                                  "3] Update Phone no\n" +
+                                  "4] Update Years Of Experience\n" +
+                                  "5] Back to previous menu");
+
+                int choice = Validator.IntValidation("enter your choice: ", 1, 5);
+                switch (choice)
+                {
+                    case 1:
+                        oldCandidate.FullName = Helper.UpdateEntityData("New Candidate Full Name: ",
+                            () => Validator.StringValidation("Candidate Full Name: ", @"^[^\s].{2,19}$"));
+                        break;
+
+                    case 2:
+                        oldCandidate.Email = Helper.UpdateEntityData("New Email: ", () => 
+                            {
+                                string email = Validator.StringValidation("Email: ", Validator.EmailPattern);
+                                CheckUniquenessOfEmail(email);
+                                return email;
+                            });
+                        break;
+
+                    case 3:
+                        oldCandidate.Phone = Helper.UpdateEntityData("New Phone no: ", () => Validator.StringValidation("Phone no: ", @"(?:1[0125]\\d{8}|[23]\\d{7}|[45689]\\d{7}))?$\"""));
+                        break;
+
+                    case 4:
+                        oldCandidate.YearsOfExperience = Helper.UpdateEntityData("New Years Of Experience: ", () => Validator.IntValidation("Years Of Experience: ", 0));
+                        break;
+
+                    case 5: Program.RecruiterMenu(); break;
+                }
+            }
+            Helper.PreviousMenu($"This id [{candidateId}] not found ", Program.CandidateMenu);
+        }
+
+        public void RemoveCandidate()
+        {
+            Console.Clear();
+            Console.WriteLine("=========== Removing A Candidate View ===========");
+
+            int candidateId = Validator.IntValidation("Candidate ID: ", 1);
+
+            Candidate? oldCandidate = null;
+            foreach (var candidate in Candidates)
+            {
+                if (candidate.Id == candidateId)
+                {
+                    oldCandidate = candidate;
+                    break;
+                }
+            }
+
+            if (oldCandidate is not null)
+            {
+                PrintCandidate(oldCandidate);
+                Console.Write("do you really want to remove this candidate? [y]: ");
+                string c = Validator.StringValidation("do you really want to remove this candidate? [y]: ", ".");
+                if (c == "y")
+                {
+                    Candidates.Remove(oldCandidate);
+                    Helper.PreviousMenu("Candidate has been removed successfully ", Program.CandidateMenu);
+                }
+                Helper.PreviousMenu("Candidate still exist ", Program.CandidateMenu);
+            }
+            Console.WriteLine("this Id not found");
+            Helper.PreviousMenu("", Program.CandidateMenu);
+
+        }
+
+        public void ListCandidate()
+        {
+            Console.Clear();
+            Console.WriteLine("============ Listing all Candidates ============");
+
+            foreach (var candidate in Candidates)
+            {
+                PrintCandidate(candidate);
+            }
+            Helper.PreviousMenu("", Program.CandidateMenu);
+        }
+
+        public static void PrintCandidate(Candidate candidate)
+        {
+            Console.WriteLine($"{candidate.Id,-3}{candidate.FullName,-10}{candidate.Email,-15}{candidate.Phone, -13}{candidate.YearsOfExperience,-2}");
+        }
+
+        private void CheckUniquenessOfEmail(string email)
+        {
+            if (email == string.Empty) return;
+
+            foreach(var candidate in Candidates)
+            {
+                if(candidate.Email == email)
+                {
+                    Console.WriteLine("this email already exist");
+                    Helper.PreviousMenu("", Program.CandidateMenu);
+                }
+            }
+        }
     }
 }

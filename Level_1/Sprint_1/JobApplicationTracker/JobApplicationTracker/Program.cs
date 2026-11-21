@@ -1,40 +1,45 @@
 ﻿using JobApplicationTracker.Models;
 using JobApplicationTracker.Services;
+using System.Diagnostics;
+using System.Security.Cryptography.X509Certificates;
+using System.Text.RegularExpressions;
 
 namespace JobApplicationTracker
 {
     internal class Program
     {
-        private static readonly CompanyService _companies = new();
-        private static readonly RecruiterService _recruiters = new();
-        private static readonly JobService _jobs = new();
-        private static readonly CandidateService _candidates = new();
+        public static readonly CompanyService _companies = new();
+        public static readonly RecruiterService _recruiters = new();
+        public static readonly JobService _jobs = new();
+        public static readonly CandidateService _candidates = new();
+        public static readonly ApplicationService _applications = new();
         static void Main(string[] args)
         {
             LoadSampleData();
-            UserInput();
+            UserInput(); 
         }
+
         static void LoadSampleData()
         {
             _companies.Companies.AddRange(
-                    new Company { Id = 1, Name = "COMP_1" },
+                    new Company { Id = 1, Name = "COMP_1"},
                     new Company { Id = 2, Name = "COMP_2" },
                     new Company { Id = 3, Name = "COMP_3" }
                 );
 
             _recruiters.Recruiters.AddRange(
-                    new Recruiter { Id = 1, Name = "R1" },
-                    new Recruiter { Id = 2, Name = "R2" },
-                    new Recruiter { Id = 3, Name = "R3" }
+                    new Recruiter { Id = 1, Name = "REQ_1", CompanyId = 1 },
+                    new Recruiter { Id = 2, Name = "REQ_2", CompanyId = 2 },
+                    new Recruiter { Id = 3, Name = "REQ_3", CompanyId = 3 }
                 );
 
             _jobs.Jobs.AddRange(
-                    new Job { Id = 1, Title = "J1" },
-                    new Job { Id = 2, Title = "J2" },
-                    new Job { Id = 3, Title = "J3" },
-                    new Job { Id = 4, Title = "J4" },
-                    new Job { Id = 5, Title = "J5" },
-                    new Job { Id = 6, Title = "J6" }
+                    new Job { Id = 1, Title = "JOB_1", CompanyId = 1, RecruiterId = 3 },
+                    new Job { Id = 2, Title = "JOB_2", CompanyId = 2, RecruiterId = 2 },
+                    new Job { Id = 3, Title = "JOB_3", CompanyId = 3, RecruiterId = 1 },
+                    new Job { Id = 4, Title = "JOB_4", CompanyId = 1, RecruiterId = 3 },
+                    new Job { Id = 5, Title = "JOB_5", CompanyId = 2, RecruiterId = 2 },
+                    new Job { Id = 6, Title = "JOB_6", CompanyId = 3, RecruiterId = 1 }
                 );
 
             _candidates.Candidates.AddRange(
@@ -45,72 +50,90 @@ namespace JobApplicationTracker
                     new Candidate { Id = 5, FullName = "CAND_5" }
                 );
         }
+
         static void UserInput()
         {
             Console.Clear();
+            Console.WriteLine("=========== Main Program ===========");
             Console.WriteLine(@"1] Companies
 2] Recruiters
 3] Jobs
 4] Candidates
 5] Exit");
 
-            int choice = IntValidation("enter your choice: ", 1, 5);
-            switch(choice)
+            int choice = Validator.IntValidation("enter your choice: ", 1, 5);
+            switch (choice)
             {
                 case 1: CompanyMenu(); break;
                 case 2: RecruiterMenu(); break;
                 case 3: JobMenu(); break;
                 case 4: CandidateMenu(); break;
-                case 5: break;
+                case 5: Exit(); break;
             }
         }
-        // Convert Any Type To Tout Type
-        private delegate bool ConvertTo<Tout>(out Tout a);
-        static Tout TypeConverter<Tout>(string msg, ConvertTo<Tout> converter)
-        {
-            Tout output;
-            Console.Write(msg);
 
-            while (!converter(out output))
-            {
-                Console.WriteLine($"invalid {typeof(Tout).Name} input");
-                Console.Write(msg);
-            }
-            return output;
-        }
-        // validate any int input & validates the range also
-        static int IntValidation(string msg, int startRange, int endRange)
-        {
-            int number = TypeConverter(msg, (out int n) => int.TryParse(Console.ReadLine(), out n));
-            
-            while(number <  startRange || number > endRange)
-            {
-                Console.WriteLine($"input should be between [{startRange}-{endRange}]");
-                number = TypeConverter(msg, (out int n) =>  int.TryParse(Console.ReadLine(), out n));
-            }
-            
-            return number;
-        }
-        static void CompanyMenu()
+        public static void CompanyMenu()
         {
             SubMenu("========== Company View ==========");
 
-            int choice = IntValidation("enter your choice: ", 1,  5);
+            int choice = Validator.IntValidation("enter your choice: ", 1, 5);
+            switch (choice)
+            {
+                case 1: _companies.AddCompany(); break;
+                case 2: _companies.UpdateCompany(); break;
+                case 3: _companies.ListCompany() ; break;
+                case 4: _companies.RemoveCompany(); break;
+                case 5: UserInput(); break;
+            }
 
         }
-        static void RecruiterMenu()
+
+        public static void RecruiterMenu()
         {
             SubMenu("========== Recruiter View ==========");
+
+            int choice = Validator.IntValidation("enter your choice: ", 1, 5);
+            switch (choice)
+            {
+                case 1: _recruiters.AddRecruiter(); break;
+                case 2: _recruiters.UpdateRecruiter(); break;
+                case 3: _recruiters.ListRecruiter(); break;
+                case 4: _recruiters.RemoveRecruiter(); break;
+                case 5: UserInput(); break;
+            }
         }
-        static void JobMenu()
+
+        public static void JobMenu()
         {
             SubMenu("========== Job View ==========");
+
+            int choice = Validator.IntValidation("enter your choice: ", 1, 5);
+            switch (choice)
+            {
+                case 1: _jobs.AddJob(); break;
+                case 2: _jobs.UpdateJob(); break;
+                case 3: _jobs.ListJob(); break;
+                case 4: _jobs.RemoveJob(); break;
+                case 5: UserInput(); break;
+            }
         }
-        static void CandidateMenu()
+
+        public static void CandidateMenu()
         {
             SubMenu("========== Candidate View ==========");
+
+            int choice = Validator.IntValidation("enter your choice: ", 1, 5);
+            switch (choice)
+            {
+                case 1: _candidates.AddCandidate(); break;
+                case 2: _candidates.UpdateCandidate(); break;
+                case 3: _candidates.ListCandidate(); break;
+                case 4: _candidates.RemoveCandidate(); break;
+                case 5: UserInput(); break;
+            }
         }
-        static void SubMenu(string title)
+
+        public static void SubMenu(string title)
         {
             Console.Clear();
             Console.WriteLine(title);
@@ -119,16 +142,12 @@ namespace JobApplicationTracker
 3] List
 4] Remove
 5] Back");
+        }
 
-            int choice = IntValidation("enter your choice: ", 1, 5);
-            switch(choice)
-            {
-                case 1: break;
-                case 2: break;
-                case 3: break;
-                case 4: break;
-                case 5: UserInput();  break;
-            }
+        // prevent any recursive calls from the main menu to any other menu
+        static void Exit()
+        {
+            Process.GetCurrentProcess().Kill();
         }
     }
 }
