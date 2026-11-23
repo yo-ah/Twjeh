@@ -2,13 +2,17 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace JobApplicationTracker.Services
 {
-    internal class RecruiterService
+    internal class RecruiterService(CompanyService service)
     {
-        public readonly List<Recruiter> Recruiters = [];
+        private readonly DataStore<Recruiter> _store = new();
+        private readonly CompanyService _companyService = service;
+
+        public void Seed(IList<Recruiter> list) => _store.Seed(list);
 
         public void AddRecruiter()
         {
@@ -23,27 +27,20 @@ namespace JobApplicationTracker.Services
 
             CheckCompanyID(companyId);
 
-            Recruiter recruiter = new() { Id = Recruiters[^1].Id + 1, Name = name, Email = email, CompanyId = companyId };
+            Recruiter recruiter = new() { Name = name, Email = email, CompanyId = companyId };
 
             PrintRecruiter(recruiter);
-            Recruiters.Add(recruiter);
+            _store.Add(recruiter);
 
             Helper.PreviousMenu("Recruiter Added Successfully ", Program.RecruiterMenu);
         }
 
         public void UpdateRecruiter()
         {
-            int recruiterId = Validator.IntValidation("Recruiter ID: ", 1);
+            int id = Validator.IntValidation("Recruiter ID: ", 1);
 
-            Recruiter? oldRecruiter = null;
-            foreach (var recruiter in Recruiters)
-            {
-                if (recruiter.Id == recruiterId)
-                {
-                    oldRecruiter = recruiter;
-                    break;
-                }
-            }
+            Recruiter? oldRecruiter = _store.GetByID(id);
+
             // this loop will continue running until user chose to back to previous menu
             while (oldRecruiter is not null)
             {
@@ -80,10 +77,13 @@ namespace JobApplicationTracker.Services
                             });
                         break;
 
-                    case 4: Program.RecruiterMenu(); break;
+                    case 4:
+                        _store.Update(oldRecruiter);
+                        Program.RecruiterMenu();
+                        break;
                 }
             }
-            Helper.PreviousMenu($"This id [{recruiterId}] not found ", Program.RecruiterMenu);
+            Helper.PreviousMenu($"This id [{id}] not found ", Program.RecruiterMenu);
         }
 
         public void RemoveRecruiter()
@@ -91,18 +91,9 @@ namespace JobApplicationTracker.Services
             Console.Clear();
             Console.WriteLine("=========== Removing A Recruiter View ===========");
 
-            int recruiterId = Validator.IntValidation("Recruiter ID: ", 1);
+            int id = Validator.IntValidation("Recruiter ID: ", 1);
 
-            Recruiter? oldRecruiter = null;
-            foreach (var recruiter in Recruiters)
-            {
-                if (recruiter.Id == recruiterId)
-                {
-                    oldRecruiter = recruiter;
-                    break;
-                }
-            }
-
+            Recruiter? oldRecruiter = _store.GetByID(id);
             if (oldRecruiter is not null)
             {
                 PrintRecruiter(oldRecruiter);
@@ -110,7 +101,7 @@ namespace JobApplicationTracker.Services
                 string c = Validator.StringValidation("do you really want to remove this recruiter? [y]: ", ".");
                 if (c == "y")
                 {
-                    Recruiters.Remove(oldRecruiter);
+                    _store.Remove(id);
                     Helper.PreviousMenu("Recruiter has been removed successfully ", Program.RecruiterMenu);
                 }
                 Helper.PreviousMenu("Recruiter still exist ", Program.RecruiterMenu);
@@ -123,23 +114,25 @@ namespace JobApplicationTracker.Services
         public void ListRecruiter()
         {
             Console.Clear();
-            Console.WriteLine("============ Listing all Recruiters ============");
+            Console.WriteLine("============ Listing all _store ============");
 
-            foreach (var recruiter in Recruiters)
+            foreach (var recruiter in _store.GetAll())
             {
                 PrintRecruiter(recruiter);
             }
             Helper.PreviousMenu("", Program.RecruiterMenu);
         }
 
+        public Recruiter? GetByID(int id) => _store.GetByID(id);
+
         public static void PrintRecruiter(Recruiter recruiter)
         {
             Console.WriteLine($"{recruiter.Id,-3}{recruiter.Name,-10}{recruiter.Email,-15}");
         }
 
-        private static void CheckCompanyID(int id)
+        private void CheckCompanyID(int id)
         {
-            if (Program._companies.GetCompanyById(id) is null)
+            if (_companyService.GetByID(id) is null)
             {
                 Console.WriteLine("there is no Company with this ID");
                 Helper.PreviousMenu("", Program.RecruiterMenu);

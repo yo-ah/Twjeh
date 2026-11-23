@@ -7,7 +7,9 @@ namespace JobApplicationTracker.Services
 {
     internal class CandidateService
     {
-        public readonly List<Candidate> Candidates = [];
+        private readonly DataStore<Candidate> _store = new();
+
+        public void Seed(IList<Candidate> list) => _store.Seed(list);
 
         public void AddCandidate()
         {
@@ -20,31 +22,23 @@ namespace JobApplicationTracker.Services
 
             CheckUniquenessOfEmail(email);
 
-            string phone = Helper.UpdateEntityData("3] Phone no: ", () => Validator.StringValidation("Phone no: ", @"^(?:(?:\+20|0020|0)1\d{8})?$"));
+            string phone = Helper.UpdateEntityData("3] Phone no: ", () => Validator.StringValidation("Phone no: ", @"^(?:(?:\+20|0020|0)1\d{9})?$"));
             
             int years = Helper.UpdateEntityData("4] Years of Experience: ", () => Validator.IntValidation("Years of Experience: ", 0, 40));
 
-            Candidate candidate = new() { Id = Candidates[^1].Id + 1, FullName = fullName, Email = email, Phone = phone, YearsOfExperience = years };
+            Candidate candidate = new() { FullName = fullName, Email = email, Phone = phone, YearsOfExperience = years };
 
             PrintCandidate(candidate);
-            Candidates.Add(candidate);
+            _store.Add(candidate);
 
             Helper.PreviousMenu("Candidate Added Successfully ", Program.CandidateMenu);
         }
 
         public void UpdateCandidate()
         {
-            int candidateId = Validator.IntValidation("Candidate ID: ", 1);
+            int id = Validator.IntValidation("Candidate ID: ", 1);
 
-            Candidate? oldCandidate = null;
-            foreach (var candidate in Candidates)
-            {
-                if (candidate.Id == candidateId)
-                {
-                    oldCandidate = candidate;
-                    break;
-                }
-            }
+            Candidate? oldCandidate = _store.GetByID(id);
 
             // this loop will continue running until user chose to back to previous menu
             while (oldCandidate is not null)
@@ -78,17 +72,20 @@ namespace JobApplicationTracker.Services
                         break;
 
                     case 3:
-                        oldCandidate.Phone = Helper.UpdateEntityData("New Phone no: ", () => Validator.StringValidation("Phone no: ", @"(?:1[0125]\\d{8}|[23]\\d{7}|[45689]\\d{7}))?$\"""));
+                        oldCandidate.Phone = Helper.UpdateEntityData("New Phone no: ", () => Validator.StringValidation("Phone no: ", @"^(?:(?:\+20|0020|0)1\d{9})?$"));
                         break;
 
                     case 4:
                         oldCandidate.YearsOfExperience = Helper.UpdateEntityData("New Years Of Experience: ", () => Validator.IntValidation("Years Of Experience: ", 0));
                         break;
 
-                    case 5: Program.RecruiterMenu(); break;
+                    case 5:
+                        _store.Update(oldCandidate);
+                        Program.CandidateMenu();
+                        break;
                 }
             }
-            Helper.PreviousMenu($"This id [{candidateId}] not found ", Program.CandidateMenu);
+            Helper.PreviousMenu($"This id [{id}] not found ", Program.CandidateMenu);
         }
 
         public void RemoveCandidate()
@@ -96,17 +93,9 @@ namespace JobApplicationTracker.Services
             Console.Clear();
             Console.WriteLine("=========== Removing A Candidate View ===========");
 
-            int candidateId = Validator.IntValidation("Candidate ID: ", 1);
+            int id = Validator.IntValidation("Candidate ID: ", 1);
 
-            Candidate? oldCandidate = null;
-            foreach (var candidate in Candidates)
-            {
-                if (candidate.Id == candidateId)
-                {
-                    oldCandidate = candidate;
-                    break;
-                }
-            }
+            Candidate? oldCandidate = _store.GetByID(id);
 
             if (oldCandidate is not null)
             {
@@ -115,7 +104,7 @@ namespace JobApplicationTracker.Services
                 string c = Validator.StringValidation("do you really want to remove this candidate? [y]: ", ".");
                 if (c == "y")
                 {
-                    Candidates.Remove(oldCandidate);
+                    _store.Remove(id);
                     Helper.PreviousMenu("Candidate has been removed successfully ", Program.CandidateMenu);
                 }
                 Helper.PreviousMenu("Candidate still exist ", Program.CandidateMenu);
@@ -130,12 +119,14 @@ namespace JobApplicationTracker.Services
             Console.Clear();
             Console.WriteLine("============ Listing all Candidates ============");
 
-            foreach (var candidate in Candidates)
+            foreach (var candidate in _store.GetAll())
             {
                 PrintCandidate(candidate);
             }
             Helper.PreviousMenu("", Program.CandidateMenu);
         }
+
+        public Candidate? GetByID(int id) => _store.GetByID(id);
 
         public static void PrintCandidate(Candidate candidate)
         {
@@ -146,7 +137,7 @@ namespace JobApplicationTracker.Services
         {
             if (email == string.Empty) return;
 
-            foreach(var candidate in Candidates)
+            foreach(var candidate in _store.GetAll())
             {
                 if(candidate.Email == email)
                 {

@@ -7,5 +7,6 @@ namespace JobApplicationTracker.Services
 {
     internal class ApplicationService
     {
+        public readonly DataStore<Application> Applications= new();
     }
 }

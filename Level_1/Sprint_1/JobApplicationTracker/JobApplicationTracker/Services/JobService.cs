@@ -6,9 +6,14 @@ using System.Text;
 
 namespace JobApplicationTracker.Services
 {
-    internal class JobService
+    internal class JobService(CompanyService company, RecruiterService recruiter)
     {
-        public readonly List<Job> Jobs = [];
+        private readonly DataStore<Job> _store = new();
+        private readonly Dictionary<int, Job> _jobs = [];
+        private readonly CompanyService _companyService = company;
+        private readonly RecruiterService _recruiterService = recruiter;
+
+        public void Seed(IList<Job> list) => _store.Seed(list);
 
         public void AddJob()
         {
@@ -24,14 +29,13 @@ namespace JobApplicationTracker.Services
             string Location = Helper.UpdateEntityData("4] Location: ", () => Validator.StringValidation("Location: ", @"^.{0,20}$"));
 
             int companyId = Helper.UpdateEntityData("5] Company ID: ", () => Validator.IntValidation("Company ID: ", 1));
-            CheckEntityId(companyId, Program._companies.Companies, () => Helper.PreviousMenu("", Program.JobMenu));
+            IsExist(() => _companyService.GetByID(companyId), () => Helper.PreviousMenu("there is no Company with this ID", Program.JobMenu));
             
             int recruiterId = Helper.UpdateEntityData("6] Recruiter ID: ", () => Validator.IntValidation("Recruiter ID: ", 1));
-            CheckEntityId(recruiterId, Program._recruiters.Recruiters, () => Helper.PreviousMenu("", Program.JobMenu));
+            IsExist(() => _recruiterService.GetByID(recruiterId), () => Helper.PreviousMenu("there is no Recruiter with this ID", Program.JobMenu));
 
             Job job = new()
             {
-                Id = Jobs[^1].Id + 1,
                 Title = title,
                 Description = description,
                 Salary = salary,
@@ -43,24 +47,18 @@ namespace JobApplicationTracker.Services
             };
 
             PrintJob(job);
-            Jobs.Add(job);
+            _store.Add(job);
+            _jobs.Add((_store.NextID() - 1), job);
 
             Helper.PreviousMenu("Job Added Successfully ", Program.JobMenu);
         }
 
         public void UpdateJob()
         {
-            int jobId = Validator.IntValidation("Job ID: ", 1);
+            int id = Validator.IntValidation("Job ID: ", 1);
 
-            Job? oldJob = null;
-            foreach (var job in Jobs)
-            {
-                if (job.Id == jobId)
-                {
-                    oldJob = job;
-                    break;
-                }
-            }
+            Job? oldJob = _store.GetByID(id);
+
             // this loop will continue running until user chose to back to previous menu
             while (oldJob is not null)
             {
@@ -114,7 +112,7 @@ namespace JobApplicationTracker.Services
                         oldJob.CompanyId = Helper.UpdateEntityData("New Company ID: ", () =>
                         {
                             int id = Validator.IntValidation("Company ID: ", 1);
-                            CheckEntityId(id, Program._companies.Companies, () => Helper.PreviousMenu("", Program.JobMenu));
+                            IsExist(() => _recruiterService.GetByID(id), () => Helper.PreviousMenu("there is no Company with this ID", Program.JobMenu));
                             return id;
                         });
                         break;
@@ -123,15 +121,19 @@ namespace JobApplicationTracker.Services
                         oldJob.RecruiterId = Helper.UpdateEntityData("New Recruiter ID: ", () =>
                              {
                                  int id = Validator.IntValidation("Recruiter ID: ", 1);
-                                 CheckEntityId(id, Program._recruiters.Recruiters, () => Helper.PreviousMenu("", Program.JobMenu));
+                                 IsExist(() => _recruiterService.GetByID(id), () => Helper.PreviousMenu("there is no Recruiter with this ID", Program.JobMenu));
                                  return id;
                              });
                         break;
 
-                    case 9: Program.RecruiterMenu(); break;
+                    case 9:
+                        _store.Update(oldJob);
+                        _jobs[oldJob.Id] = oldJob;
+                        Program.JobMenu();
+                        break;
                 }
             }
-            Helper.PreviousMenu($"This id [{jobId}] not found ", Program.RecruiterMenu);
+            Helper.PreviousMenu($"This id [{id}] not found ", Program.JobMenu);
         }
 
         public void RemoveJob()
@@ -139,12 +141,12 @@ namespace JobApplicationTracker.Services
             Console.Clear();
             Console.WriteLine("=========== Removing A Job View ===========");
 
-            int jobId = Validator.IntValidation("Job ID: ", 1);
+            int id = Validator.IntValidation("Job ID: ", 1);
 
             Job? oldJob = null;
-            foreach (var job in Jobs)
+            foreach (var job in _store.GetAll())
             {
-                if (job.Id == jobId)
+                if (job.Id == id)
                 {
                     oldJob = job;
                     break;
@@ -158,7 +160,8 @@ namespace JobApplicationTracker.Services
                 string c = Validator.StringValidation("do you really want to remove this job? [y]: ", ".");
                 if (c == "y")
                 {
-                    Jobs.Remove(oldJob);
+                    _store.Remove(id);
+                    _jobs.Remove(id);
                     Helper.PreviousMenu("Job has been removed successfully ", Program.JobMenu);
                 }
                 Helper.PreviousMenu("Job still exist ", Program.JobMenu);
@@ -171,12 +174,23 @@ namespace JobApplicationTracker.Services
         public void ListJob()
         {
             Console.Clear();
-            Console.WriteLine("============ Listing all Jobs ============");
+            Console.WriteLine("============ Listing all _store ============");
 
-            foreach (var job in Jobs)
+            foreach (var job in _store.GetAll())
             {
                 PrintJob(job);
             }
+            Helper.PreviousMenu("", Program.JobMenu);
+        }
+
+        public void FindJobByID()
+        {
+            if(_jobs.TryGetValue(Validator.IntValidation("Job ID: ", 1), out var job))
+            {
+                PrintJob(job);
+                Helper.PreviousMenu("", Program.JobMenu);
+            }
+            Console.WriteLine("this Id not found");
             Helper.PreviousMenu("", Program.JobMenu);
         }
 
@@ -186,11 +200,9 @@ namespace JobApplicationTracker.Services
                 $"{job.PostedDate.Date, -10}{job.CompanyId, -3}{job.RecruiterId,-3}");
         }
 
-        private static void CheckEntityId<T>(int id, ICollection<T> collection, Action action) where T: IEntity
+        private static void IsExist(Func<object?> func, Action action)
         {
-            foreach(var item in collection) if (item.Id == id) return;
-
-            Console.WriteLine($"there is no {typeof(T).Name} with this ID");
+            if (func() is not null) return;
             action();
         }
     }

@@ -9,9 +9,11 @@ namespace JobApplicationTracker.Services
 {
     internal class CompanyService
     {
-        public  readonly List<Company> Companies = [];
+        private readonly DataStore<Company> _store = new();
 
-        public  void  AddCompany()
+        public void Seed(IList<Company> list) => _store.Seed(list);
+
+        public void AddCompany()
         {
             Console.Clear();
             Console.WriteLine("========== Create New Company ==========");
@@ -29,27 +31,20 @@ namespace JobApplicationTracker.Services
                     return (CompanyStatus)Validator.IntValidation("Status: ", 1, 3) - 1;
                 });
 
-            Company company = new() { Id = Companies[^1].Id + 1, Name = name, Industry = industry, City = city, Status = status };
+            Company company = new() { Name = name, Industry = industry, City = city, Status = status };
 
-            Companies.Add(company);
+            _store.Add(company);
             PrintCompany(company);
 
             Helper.PreviousMenu("Company Added Successfully ", Program.CompanyMenu);
         }
 
-        public  void  UpdateCompany()
+        public void UpdateCompany()
         {
-            int companyId = Validator.IntValidation("Company ID: ", 1);
+            int id = Validator.IntValidation("Company ID: ", 1);
 
-            Company? oldCompany = null;
-            foreach (var company in Companies)
-            {
-                if (company.Id == companyId)
-                {
-                    oldCompany = company;
-                    break;
-                }
-            }
+            Company? oldCompany = _store.GetByID(id);
+
             // this loop will continue running until user chose to back to previous menu
             while (oldCompany is not null)
             {
@@ -90,28 +85,23 @@ namespace JobApplicationTracker.Services
                         }));
                         break;
 
-                    case 5: Program.CompanyMenu(); break;
+                    case 5:
+                        _store.Update(oldCompany);
+                        Program.CompanyMenu(); 
+                        break;
                 }
             }
-            Helper.PreviousMenu($"This id [{companyId}] not found ", Program.CompanyMenu);
+            Helper.PreviousMenu($"This id [{id}] not found ", Program.CompanyMenu);
         }
 
-        public  void  RemoveCompany()
+        public void RemoveCompany()
         {
             Console.Clear();
             Console.WriteLine("=========== Removing A Company View ===========");
 
-            int companyId = Validator.IntValidation("Company ID: ", 1);
+            int id = Validator.IntValidation("Company ID: ", 1);
 
-            Company? oldCompany = null;
-            foreach (var company in Companies)
-            {
-                if (company.Id == companyId)
-                {
-                    oldCompany = company;
-                    break;
-                }
-            }
+            Company? oldCompany = _store.GetByID(id);
 
             if (oldCompany is not null)
             {
@@ -120,7 +110,7 @@ namespace JobApplicationTracker.Services
                 string c = Validator.StringValidation("do you really want to remove this company? [y]: ", ".");
                 if(c == "y")
                 {
-                    Companies.Remove(oldCompany);
+                    _store.Remove(id);
                     Helper.PreviousMenu("Company has been removed successfully ", Program.CompanyMenu);
                 }
                 Helper.PreviousMenu("Company still exist ", Program.CompanyMenu);
@@ -130,23 +120,24 @@ namespace JobApplicationTracker.Services
 
         }
 
-        public  void  ListCompany()
+        public void ListCompany()
         {
-            Console.Clear();
-            Console.WriteLine("============ Listing all Companies ============");
-
-            foreach (var company in Companies)
-            {
-                PrintCompany(company);
-            }
+            ListCompanyByStatus(Helper.UpdateEntityData("Company Status:- \n", () =>
+                {
+                    Helper.ListEnum<CompanyStatus>();
+                    return (CompanyStatus)Validator.IntValidation("Status: ", 1, 3) - 1;
+                }));
             Helper.PreviousMenu("", Program.CompanyMenu);
         }
 
-        public  void ListCompanyByStatus(CompanyStatus status)
+        public void ListCompanyByStatus(CompanyStatus status)
         {
+            Console.Clear();
+            Console.WriteLine($"============ Listing {status} Companies ============");
+
             if (Enum.IsDefined(status))
             {
-                foreach (var company in Companies)
+                foreach (var company in _store.GetAll())
                 {
                     if (company.Status == status) PrintCompany(company);
                 }
@@ -156,6 +147,8 @@ namespace JobApplicationTracker.Services
                 Console.WriteLine($"invalid value {status} for {typeof(CompanyStatus).Name}");
             }
         }
+
+        public Company? GetByID(int id) => _store.GetByID(id);
 
         public static void ChangeCompanyStatus(Company company, CompanyStatus newStatus)
         {
@@ -179,15 +172,6 @@ namespace JobApplicationTracker.Services
         public static void PrintCompany(Company company)
         {
             Console.WriteLine($"{company.Id,-3}{company.Name,-10}{company.Industry,-15}{company.City,-10}{company.Status,-5}");
-        }
-
-        public Company? GetCompanyById(int id)
-        {
-            foreach (var company in Companies)
-            {
-                if (company.Id == id) return company;
-            }
-            return default;
         }
     }
 }
