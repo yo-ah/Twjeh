@@ -7,9 +7,10 @@ using System.Text.RegularExpressions;
 
 namespace JobApplicationTracker.Services
 {
-    internal class CompanyService: IService<Company>
+    internal class CompanyService : IService<Company>
     {
         private readonly DataStore<Company> _store = new();
+        private readonly Stack<(int, CompanyStatus)> _undo = [];
 
         public void Seed(IList<Company> list) => _store.Seed(list);
 
@@ -25,8 +26,8 @@ namespace JobApplicationTracker.Services
             string city = Validator.StringValidation("City: ", @"^([a-zA-Z.][a-zA-Z0-9.]{0,14})?$");
 
             Company company = new() { Name = name, Industry = industry, City = city };
-            _store.Add(company);
             Print(company);
+            _store.Add(company);
 
             Helper.PreviousMenu("Company Added Successfully ");
         }
@@ -49,9 +50,10 @@ namespace JobApplicationTracker.Services
                                   "2] Update Industry\n" +
                                   "3] Update City\n" +
                                   "4] Update Status\n" +
-                                  "5] Back to previous menu");
+                                  "5] Undo Option\n" +
+                                  "6] Back to previous menu");
 
-                int choice = Validator.IntValidation("enter your choice: ", 1, 5);
+                int choice = Validator.IntValidation("enter your choice: ", 1, 6);
                 switch (choice)
                 {
                     case 1:
@@ -68,15 +70,41 @@ namespace JobApplicationTracker.Services
 
                     case 4:
                         Helper.ListEnum<CompanyStatus>();
-                        ChangeStatus(oldCompany, (CompanyStatus)Validator.IntValidation("Status: ", 1, 3) - 1);
+                        var newStatus = (CompanyStatus)Validator.IntValidation("Status: ", 1, 3) - 1;
+                        ChangeStatus(oldCompany, newStatus);
                         break;
 
                     case 5:
+                        UndoCompanyStatus();
+                        break;
+
+                    case 6:
                         _store.Update(oldCompany);
                         return;
                 }
             }
             Helper.PreviousMenu($"This id [{id}] not found ");
+        }
+
+        public void UndoCompanyStatus()
+        {
+            if (_undo.Count == 0)
+            {
+                Helper.PreviousMenu("there is no thing to undo ");
+                return;
+            }
+
+            var oldStatus = _undo.Pop();
+            var company = GetByID(oldStatus.Item1);
+
+            if (company is null)
+            {
+                Helper.PreviousMenu($"this company (ID: {oldStatus.Item1}) have been deleted\n");
+                return;
+            }
+
+            company.Status = oldStatus.Item2;
+            Helper.PreviousMenu($"restored {company.Name} to {oldStatus} ");
         }
 
         public void Remove()
@@ -91,9 +119,7 @@ namespace JobApplicationTracker.Services
             if (oldCompany is not null)
             {
                 Print(oldCompany);
-                Console.Write("do you really want to remove this company? [y]: ");
-                string c = Validator.StringValidation("do you really want to remove this company? [y]: ", ".");
-                if(c == "y")
+                if (Validator.StringValidation("do you really want to remove this company? [y]: ", ".") == "y")
                 {
                     _store.Remove(id);
                     Helper.PreviousMenu("Company has been removed successfully ");
@@ -132,7 +158,7 @@ namespace JobApplicationTracker.Services
 
         public Company? GetByID(int id) => _store.GetByID(id);
 
-        public static void ChangeStatus(Company company, CompanyStatus newStatus)
+        public void ChangeStatus(Company company, CompanyStatus newStatus)
         {
             if (!Enum.IsDefined(newStatus))
             {
@@ -146,6 +172,7 @@ namespace JobApplicationTracker.Services
             }
             else
             {
+                _undo.Push((company.Id, company.Status));
                 company.Status = newStatus;
             }
 

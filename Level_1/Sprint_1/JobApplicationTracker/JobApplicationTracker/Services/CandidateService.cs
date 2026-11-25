@@ -8,6 +8,7 @@ namespace JobApplicationTracker.Services
     internal class CandidateService: IService<Candidate>
     {
         private readonly DataStore<Candidate> _store = new();
+        private readonly HashSet<string> _emails = [];
 
         public void Seed(IList<Candidate> list) => _store.Seed(list);
 
@@ -142,11 +143,7 @@ namespace JobApplicationTracker.Services
         {
             if (email == string.Empty) return true;
 
-            foreach(var candidate in _store.GetAll())
-            {
-                if(candidate.Email == email) return false;
-            }
-            return true;
+            return _emails.Contains(email);
         }
     }
 }

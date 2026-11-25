@@ -12,7 +12,7 @@ namespace JobApplicationTracker
         static readonly RecruiterService _recruiters = new(_companies);
         static readonly JobService _jobs = new(_companies, _recruiters);
         static readonly CandidateService _candidates = new();
-        static readonly ApplicationService _applications = new(_candidates, _jobs);
+        static readonly ApplicationService _applications = new(_candidates, _jobs, _companies);
         static void Main(string[] args)
         {
             LoadSampleData();
@@ -22,35 +22,34 @@ namespace JobApplicationTracker
         static void LoadSampleData()
         {
             _companies.Seed([
-                    new Company { Name = "COMP_1"},
-                    new Company { Name = "COMP_2" },
-                    new Company { Name = "COMP_3" }
+                    new Company { Name = "COMP_1", City = "Cairo", Industry = "Energy" },
+                    new Company { Name = "COMP_2", City = "Cairo", Industry = "Energy", Status = CompanyStatus.Approved },
+                    new Company { Name = "COMP_3", City = "Cairo", Industry = "Energy" }
                     ]);
 
             _recruiters.Seed([
-                    new Recruiter { Id = 1, Name = "REQ_1", CompanyId = 1 },
-                    new Recruiter { Id = 2, Name = "REQ_2", CompanyId = 2 },
-                    new Recruiter { Id = 3, Name = "REQ_3", CompanyId = 3 }
+                    new Recruiter { Name = "REQ_1", CompanyId = 1 },
+                    new Recruiter { Name = "REQ_2", CompanyId = 3 },
+                    new Recruiter { Name = "REQ_3", CompanyId = 3 }
                 ]);
 
             _jobs.Seed([
-                    new Job { Id = 1, Title = "JOB_1", CompanyId = 1, RecruiterId = 3 },
-                    new Job { Id = 2, Title = "JOB_2", CompanyId = 2, RecruiterId = 2 },
-                    new Job { Id = 3, Title = "JOB_3", CompanyId = 3, RecruiterId = 1 },
-                    new Job { Id = 4, Title = "JOB_4", CompanyId = 1, RecruiterId = 3 },
-                    new Job { Id = 5, Title = "JOB_5", CompanyId = 2, RecruiterId = 2 },
-                    new Job { Id = 6, Title = "JOB_6", CompanyId = 3, RecruiterId = 1 }
+                    new Job { Title = "JOB_1", CompanyId = 2, RecruiterId = 3, Salary = 1000 },
+                    new Job { Title = "JOB_2", CompanyId = 2, RecruiterId = 2, Salary = 1000 },
+                    new Job { Title = "JOB_3", CompanyId = 2, RecruiterId = 2, Salary = 1000 },
+                    new Job { Title = "JOB_4", CompanyId = 2, RecruiterId = 3, Salary = 1000 },
+                    new Job { Title = "JOB_5", CompanyId = 2, RecruiterId = 2, Salary = 1000 },
+                    new Job { Title = "JOB_6", CompanyId = 2, RecruiterId = 3, Salary = 1000 }
                 ]);
 
             _candidates.Seed([
-                    new Candidate { Id = 1, FullName = "CAND_1" },
-                    new Candidate { Id = 2, FullName = "CAND_2" },
-                    new Candidate { Id = 3, FullName = "CAND_3" },
-                    new Candidate { Id = 4, FullName = "CAND_4" },
-                    new Candidate { Id = 5, FullName = "CAND_5" }
+                    new Candidate { FullName = "CAND_1", Email = "test1@gmail.com" },
+                    new Candidate { FullName = "CAND_2", Email = "test2@gmail.com" },
+                    new Candidate { FullName = "CAND_3", Email = "test3@gmail.com" },
+                    new Candidate { FullName = "CAND_4", Email = "test4@gmail.com" },
+                    new Candidate { FullName = "CAND_5", Email = "test5@gmail.com" }
                 ]);
         }
-
         static void UserInput()
         {
             while (true)
@@ -84,7 +83,7 @@ namespace JobApplicationTracker
 
         public static void JobMenu() => SubMenu("========== Job View ==========", _jobs);
 
-        public static void CandidateMenu() => SubMenu("========== Candidate View ==========", _companies);
+        public static void CandidateMenu() => SubMenu("========== Candidate View ==========", _candidates);
 
         public static void ApplicationMenu() => SubMenu("========== Application View ==========", _applications);
 

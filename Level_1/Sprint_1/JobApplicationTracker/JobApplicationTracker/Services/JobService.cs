@@ -33,9 +33,16 @@ namespace JobApplicationTracker.Services
             string Location = Validator.StringValidation("Location: ", @"^.{0,20}$");
 
             int companyId = Validator.IntValidation("Company ID: ", 1);
-            if(_companyService.GetByID(companyId) is null)
+            var company = _companyService.GetByID(companyId);
+            if (company is null)
             {
                 Helper.PreviousMenu("there is no Company with this ID ");
+                return;
+            }
+            else if (!IsValidCompany(company))
+            {
+                Helper.PreviousMenu($"can't create a job for un approved company this company" +
+                    $" {company.Name} is {company.Status}\n");
                 return;
             }
 
@@ -185,12 +192,14 @@ namespace JobApplicationTracker.Services
             Helper.PreviousMenu("");
         }
 
-        public Job? GetByID(int id) => _store.GetByID(id);
+        public Job? GetByID(int id) => _jobs.TryGetValue(id, out Job? val) ? val : null;
 
         public void Print(Job job)
         {
             Console.WriteLine($"{job.Id,-3}{job.Title,-7}{job.Description,-30}{job.Salary, -5}{job.Location, -20}{job.IsOpen, -4}" +
                 $"{job.PostedDate.Date, -10}{job.CompanyId, -3}{job.RecruiterId,-3}");
         }
+
+        private bool IsValidCompany(Company company) => company.Status == CompanyStatus.Approved;
     }
 }
