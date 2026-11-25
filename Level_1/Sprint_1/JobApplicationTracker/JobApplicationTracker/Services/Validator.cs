@@ -41,6 +41,7 @@ namespace JobApplicationTracker.Services
 
         public static string StringValidation(string msg, string pattern)
         {
+            Console.Write(msg);
             string output = Console.ReadLine() ?? "";
 
             while (!Regex.IsMatch(output, pattern))

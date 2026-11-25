@@ -7,39 +7,31 @@ using System.Text.RegularExpressions;
 
 namespace JobApplicationTracker.Services
 {
-    internal class CompanyService
+    internal class CompanyService: IService<Company>
     {
         private readonly DataStore<Company> _store = new();
 
         public void Seed(IList<Company> list) => _store.Seed(list);
 
-        public void AddCompany()
+        public void Add()
         {
             Console.Clear();
             Console.WriteLine("========== Create New Company ==========");
 
-            string name = Helper.UpdateEntityData("1] Company Name (req): ", () => Validator.StringValidation("Company Name (req): ", @"^[a-zA-Z.][a-zA-Z0-9.]{2,9}$"));
+            string name = Validator.StringValidation("Company Name (req): ", @"^[a-zA-Z.][ a-zA-Z0-9.]{2,20}$");
 
-            string industry = Helper.UpdateEntityData("2] Industry: ", () => Validator.StringValidation("Industry: ", @"^([a-zA-Z.][a-zA-Z0-9.]{0,14})?$"));
+            string industry = Validator.StringValidation("Industry: ", @"^([a-zA-Z.][ a-zA-Z0-9.]{0,14})?$");
 
-            string city = Helper.UpdateEntityData("3] City: ", () => Validator.StringValidation("City: ", @"^([a-zA-Z.][a-zA-Z0-9.]{0,14})?$"));
+            string city = Validator.StringValidation("City: ", @"^([a-zA-Z.][a-zA-Z0-9.]{0,14})?$");
 
-            CompanyStatus status = Helper.UpdateEntityData("4] Company Status:- \n",
-                () =>
-                {
-                    Helper.ListEnum<CompanyStatus>();
-                    return (CompanyStatus)Validator.IntValidation("Status: ", 1, 3) - 1;
-                });
-
-            Company company = new() { Name = name, Industry = industry, City = city, Status = status };
-
+            Company company = new() { Name = name, Industry = industry, City = city };
             _store.Add(company);
-            PrintCompany(company);
+            Print(company);
 
-            Helper.PreviousMenu("Company Added Successfully ", Program.CompanyMenu);
+            Helper.PreviousMenu("Company Added Successfully ");
         }
 
-        public void UpdateCompany()
+        public void Update()
         {
             int id = Validator.IntValidation("Company ID: ", 1);
 
@@ -51,7 +43,7 @@ namespace JobApplicationTracker.Services
                 Console.Clear();
                 Console.WriteLine("============= Update Company =============");
 
-                PrintCompany(oldCompany);
+                Print(oldCompany);
 
                 Console.WriteLine("1] Update Name\n" +
                                   "2] Update Industry\n" +
@@ -63,38 +55,31 @@ namespace JobApplicationTracker.Services
                 switch (choice)
                 {
                     case 1:
-                        oldCompany.Name = Helper.UpdateEntityData("New Company Name: ",
-                            () => Validator.StringValidation("Company Name: ", @"^[a-zA-Z.][a-zA-Z0-9.]{2,9}$"));
+                        oldCompany.Name = Validator.StringValidation("Company Name: ", @"^[a-zA-Z.][a-zA-Z0-9.]{2,9}$");
                         break;
 
                     case 2:
-                        oldCompany.Industry = Helper.UpdateEntityData("New Industry: ",
-                            () => Validator.StringValidation("Industry: ", @"^[a-zA-Z.][a-zA-Z0-9.]{2,9}$"));
+                        oldCompany.Industry = Validator.StringValidation("Industry: ", @"^[a-zA-Z.][a-zA-Z0-9.]{2,9}$");
                         break;
 
                     case 3:
-                        oldCompany.City = Helper.UpdateEntityData("New City: ",
-                            () => Validator.StringValidation("City: ", @"^[a-zA-Z.][a-zA-Z0-9.]{2,9}$"));
+                        oldCompany.City = Validator.StringValidation("City: ", @"^[a-zA-Z.][a-zA-Z0-9.]{2,9}$");
                         break;
 
                     case 4:
-                        ChangeCompanyStatus(oldCompany, Helper.UpdateEntityData("New Status:- ", () =>
-                        {
-                            Helper.ListEnum<CompanyStatus>();
-                            return (CompanyStatus)Validator.IntValidation("Status: ", 1, 3) - 1;
-                        }));
+                        Helper.ListEnum<CompanyStatus>();
+                        ChangeStatus(oldCompany, (CompanyStatus)Validator.IntValidation("Status: ", 1, 3) - 1);
                         break;
 
                     case 5:
                         _store.Update(oldCompany);
-                        Program.CompanyMenu(); 
-                        break;
+                        return;
                 }
             }
-            Helper.PreviousMenu($"This id [{id}] not found ", Program.CompanyMenu);
+            Helper.PreviousMenu($"This id [{id}] not found ");
         }
 
-        public void RemoveCompany()
+        public void Remove()
         {
             Console.Clear();
             Console.WriteLine("=========== Removing A Company View ===========");
@@ -105,32 +90,29 @@ namespace JobApplicationTracker.Services
 
             if (oldCompany is not null)
             {
-                PrintCompany(oldCompany);
+                Print(oldCompany);
                 Console.Write("do you really want to remove this company? [y]: ");
                 string c = Validator.StringValidation("do you really want to remove this company? [y]: ", ".");
                 if(c == "y")
                 {
                     _store.Remove(id);
-                    Helper.PreviousMenu("Company has been removed successfully ", Program.CompanyMenu);
+                    Helper.PreviousMenu("Company has been removed successfully ");
+                    return;
                 }
-                Helper.PreviousMenu("Company still exist ", Program.CompanyMenu);
+                Helper.PreviousMenu("Company still exist ");
+                return;
             }
-            Console.WriteLine("this Id not found");
-            Helper.PreviousMenu("", Program.CompanyMenu);
-
+            Helper.PreviousMenu($"This id [{id}] not found ");
         }
 
-        public void ListCompany()
+        public void List()
         {
-            ListCompanyByStatus(Helper.UpdateEntityData("Company Status:- \n", () =>
-                {
-                    Helper.ListEnum<CompanyStatus>();
-                    return (CompanyStatus)Validator.IntValidation("Status: ", 1, 3) - 1;
-                }));
-            Helper.PreviousMenu("", Program.CompanyMenu);
+            Helper.ListEnum<CompanyStatus>();
+            ListByStatus((CompanyStatus)Validator.IntValidation("Company Status: ", 1, 3) - 1);
+            Helper.PreviousMenu("");
         }
 
-        public void ListCompanyByStatus(CompanyStatus status)
+        public void ListByStatus(CompanyStatus status)
         {
             Console.Clear();
             Console.WriteLine($"============ Listing {status} Companies ============");
@@ -139,7 +121,7 @@ namespace JobApplicationTracker.Services
             {
                 foreach (var company in _store.GetAll())
                 {
-                    if (company.Status == status) PrintCompany(company);
+                    if (company.Status == status) Print(company);
                 }
             }
             else
@@ -150,7 +132,7 @@ namespace JobApplicationTracker.Services
 
         public Company? GetByID(int id) => _store.GetByID(id);
 
-        public static void ChangeCompanyStatus(Company company, CompanyStatus newStatus)
+        public static void ChangeStatus(Company company, CompanyStatus newStatus)
         {
             if (!Enum.IsDefined(newStatus))
             {
@@ -169,7 +151,7 @@ namespace JobApplicationTracker.Services
 
         }
 
-        public static void PrintCompany(Company company)
+        public void Print(Company company)
         {
             Console.WriteLine($"{company.Id,-3}{company.Name,-10}{company.Industry,-15}{company.City,-10}{company.Status,-5}");
         }

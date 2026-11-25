@@ -5,36 +5,39 @@ using System.Text;
 
 namespace JobApplicationTracker.Services
 {
-    internal class CandidateService
+    internal class CandidateService: IService<Candidate>
     {
         private readonly DataStore<Candidate> _store = new();
 
         public void Seed(IList<Candidate> list) => _store.Seed(list);
 
-        public void AddCandidate()
+        public void Add()
         {
             Console.Clear();
             Console.WriteLine("========== Create New Candidate ==========");
 
-            string fullName = Helper.UpdateEntityData("1] Candidate Full Name (req): ", () => Validator.StringValidation("Candidate Name (req): ", @"^[a-zA-Z.][ a-zA-Z0-9.]{2,20}$"));
+            string fullName = Validator.StringValidation("Candidate Full Name (req): ", @"^[a-zA-Z.][ a-zA-Z0-9.]{2,20}$");
 
-            string email = Helper.UpdateEntityData("2] Email: ", () => Validator.StringValidation("Email: ", Validator.EmailPattern));
+            string email = Validator.StringValidation("Email: ", Validator.EmailPattern);
+            if (!IsUnique(email))
+            {
+                Helper.PreviousMenu("this email already exist ");
+                return;
+            }
 
-            CheckUniquenessOfEmail(email);
-
-            string phone = Helper.UpdateEntityData("3] Phone no: ", () => Validator.StringValidation("Phone no: ", @"^(?:(?:\+20|0020|0)1\d{9})?$"));
+            string phone = Validator.StringValidation("Phone no: ", @"^(?:(?:\+20|0020|0)1\d{9})?$");
             
-            int years = Helper.UpdateEntityData("4] Years of Experience: ", () => Validator.IntValidation("Years of Experience: ", 0, 40));
+            int years = Validator.IntValidation("Years of Experience: ", 0, 40);
 
             Candidate candidate = new() { FullName = fullName, Email = email, Phone = phone, YearsOfExperience = years };
 
-            PrintCandidate(candidate);
+            Print(candidate);
             _store.Add(candidate);
 
-            Helper.PreviousMenu("Candidate Added Successfully ", Program.CandidateMenu);
+            Helper.PreviousMenu("Candidate Added Successfully ");
         }
 
-        public void UpdateCandidate()
+        public void Update()
         {
             int id = Validator.IntValidation("Candidate ID: ", 1);
 
@@ -46,7 +49,7 @@ namespace JobApplicationTracker.Services
                 Console.Clear();
                 Console.WriteLine("============= Update Candidate =============");
 
-                PrintCandidate(oldCandidate);
+                Print(oldCandidate);
 
                 Console.WriteLine("1] Update Name\n" +
                                   "2] Update Email\n" +
@@ -58,37 +61,38 @@ namespace JobApplicationTracker.Services
                 switch (choice)
                 {
                     case 1:
-                        oldCandidate.FullName = Helper.UpdateEntityData("New Candidate Full Name: ",
-                            () => Validator.StringValidation("Candidate Full Name: ", @"^[^\s].{2,19}$"));
+                        oldCandidate.FullName = Validator.StringValidation("Candidate Full Name: ",
+                                                                           @"^[a-zA-Z.][ a-zA-Z0-9.]{2,20}$");
                         break;
 
                     case 2:
-                        oldCandidate.Email = Helper.UpdateEntityData("New Email: ", () => 
-                            {
-                                string email = Validator.StringValidation("Email: ", Validator.EmailPattern);
-                                CheckUniquenessOfEmail(email);
-                                return email;
-                            });
+                        string email = Validator.StringValidation("Email: ", Validator.EmailPattern);
+                        if(email == oldCandidate.Email)
+                        {
+                            Helper.PreviousMenu("you can't enter same email ");
+                            return;
+                        }
+                        if (!IsUnique(email)) break;
+                        oldCandidate.Email = email;
                         break;
 
                     case 3:
-                        oldCandidate.Phone = Helper.UpdateEntityData("New Phone no: ", () => Validator.StringValidation("Phone no: ", @"^(?:(?:\+20|0020|0)1\d{9})?$"));
+                        oldCandidate.Phone = Validator.StringValidation("Phone no: ", @"^(?:(?:\+20|0020|0)1\d{9})?$");
                         break;
 
                     case 4:
-                        oldCandidate.YearsOfExperience = Helper.UpdateEntityData("New Years Of Experience: ", () => Validator.IntValidation("Years Of Experience: ", 0));
+                        oldCandidate.YearsOfExperience = Validator.IntValidation("Years Of Experience: ", 0, 40);
                         break;
 
                     case 5:
                         _store.Update(oldCandidate);
-                        Program.CandidateMenu();
-                        break;
+                        return;
                 }
             }
-            Helper.PreviousMenu($"This id [{id}] not found ", Program.CandidateMenu);
+            Helper.PreviousMenu($"This id [{id}] not found ");
         }
 
-        public void RemoveCandidate()
+        public void Remove()
         {
             Console.Clear();
             Console.WriteLine("=========== Removing A Candidate View ===========");
@@ -99,52 +103,50 @@ namespace JobApplicationTracker.Services
 
             if (oldCandidate is not null)
             {
-                PrintCandidate(oldCandidate);
+                Print(oldCandidate);
                 Console.Write("do you really want to remove this candidate? [y]: ");
                 string c = Validator.StringValidation("do you really want to remove this candidate? [y]: ", ".");
                 if (c == "y")
                 {
                     _store.Remove(id);
-                    Helper.PreviousMenu("Candidate has been removed successfully ", Program.CandidateMenu);
+                    Helper.PreviousMenu("Candidate has been removed successfully ");
+                    return;
                 }
-                Helper.PreviousMenu("Candidate still exist ", Program.CandidateMenu);
+                Helper.PreviousMenu("Candidate still exist ");
+                return;
             }
-            Console.WriteLine("this Id not found");
-            Helper.PreviousMenu("", Program.CandidateMenu);
+            Helper.PreviousMenu($"This id [{id}] not found ");
 
         }
 
-        public void ListCandidate()
+        public void List()
         {
             Console.Clear();
             Console.WriteLine("============ Listing all Candidates ============");
 
             foreach (var candidate in _store.GetAll())
             {
-                PrintCandidate(candidate);
+                Print(candidate);
             }
-            Helper.PreviousMenu("", Program.CandidateMenu);
+            Helper.PreviousMenu("");
         }
 
         public Candidate? GetByID(int id) => _store.GetByID(id);
 
-        public static void PrintCandidate(Candidate candidate)
+        public void Print(Candidate candidate)
         {
             Console.WriteLine($"{candidate.Id,-3}{candidate.FullName,-10}{candidate.Email,-15}{candidate.Phone, -13}{candidate.YearsOfExperience,-2}");
         }
 
-        private void CheckUniquenessOfEmail(string email)
+        private bool IsUnique(string email)
         {
-            if (email == string.Empty) return;
+            if (email == string.Empty) return true;
 
             foreach(var candidate in _store.GetAll())
             {
-                if(candidate.Email == email)
-                {
-                    Console.WriteLine("this email already exist");
-                    Helper.PreviousMenu("", Program.CandidateMenu);
-                }
+                if(candidate.Email == email) return false;
             }
+            return true;
         }
     }
 }

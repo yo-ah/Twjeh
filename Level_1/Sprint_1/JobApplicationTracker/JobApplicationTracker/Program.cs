@@ -12,11 +12,11 @@ namespace JobApplicationTracker
         static readonly RecruiterService _recruiters = new(_companies);
         static readonly JobService _jobs = new(_companies, _recruiters);
         static readonly CandidateService _candidates = new();
-        static readonly ApplicationService _applications = new();
+        static readonly ApplicationService _applications = new(_candidates, _jobs);
         static void Main(string[] args)
         {
             LoadSampleData();
-            UserInput(); 
+            UserInput();
         }
 
         static void LoadSampleData()
@@ -53,109 +53,64 @@ namespace JobApplicationTracker
 
         static void UserInput()
         {
-            Console.Clear();
-            Console.WriteLine("=========== Main Program ===========");
-            Console.WriteLine(@"1] Companies
-2] Recruiters
-3] Jobs
-4] Candidates
-5] Applications
-6] Exit");
-
-            int choice = Validator.IntValidation("enter your choice: ", 1, 6);
-            switch (choice)
+            while (true)
             {
-                case 1: CompanyMenu(); break;
-                case 2: RecruiterMenu(); break;
-                case 3: JobMenu(); break;
-                case 4: CandidateMenu(); break;
-                case 5: ApplicationMenu(); break;
-                case 6: Exit(); break;
+
+                Console.Clear();
+                Console.WriteLine("=========== Main Program ===========");
+                Console.WriteLine("1] Companies\n" +
+                                  "2] Recruiters\n" +
+                                  "3] Jobs\n" +
+                                  "4] Candidates\n" +
+                                  "5] Applications\n" +
+                                  "6] Exit");
+
+                int choice = Validator.IntValidation("enter your choice: ", 1, 6);
+                switch (choice)
+                {
+                    case 1: CompanyMenu(); break;
+                    case 2: RecruiterMenu(); break;
+                    case 3: JobMenu(); break;
+                    case 4: CandidateMenu(); break;
+                    case 5: ApplicationMenu(); break;
+                    case 6: return;
+                }
             }
         }
 
-        public static void CompanyMenu()
-        {
-            SubMenu("========== Company View ==========");
+        public static void CompanyMenu() => SubMenu("========== Company View ==========", _companies);
 
-            int choice = Validator.IntValidation("enter your choice: ", 1, 5);
-            switch (choice)
+        public static void RecruiterMenu() => SubMenu("========== Recruiter View ==========", _recruiters);
+
+        public static void JobMenu() => SubMenu("========== Job View ==========", _jobs);
+
+        public static void CandidateMenu() => SubMenu("========== Candidate View ==========", _companies);
+
+        public static void ApplicationMenu() => SubMenu("========== Application View ==========", _applications);
+
+        public static void SubMenu<T>(string title, IService<T> service) where T : class, IEntity
+        {
+            // this loop will continue to run until user wan to back to main menu
+            while (true)
             {
-                case 1: _companies.AddCompany(); break;
-                case 2: _companies.UpdateCompany(); break;
-                case 3: _companies.ListCompany() ; break;
-                case 4: _companies.RemoveCompany(); break;
-                case 5: UserInput(); break;
+                Console.Clear();
+                Console.WriteLine(title);
+                Console.WriteLine("1] Add\n" +
+                                  "2] Update\n" +
+                                  "3] List\n" +
+                                  "4] Remove\n" +
+                                  "5] Back");
+
+                int choice = Validator.IntValidation("enter your choice: ", 1, 5);
+                switch (choice)
+                {
+                    case 1: service.Add(); break;
+                    case 2: service.Update(); break;
+                    case 3: service.List(); break;
+                    case 4: service.Remove(); break;
+                    case 5: return;
+                }
             }
-
-        }
-
-        public static void RecruiterMenu()
-        {
-            SubMenu("========== Recruiter View ==========");
-
-            int choice = Validator.IntValidation("enter your choice: ", 1, 5);
-            switch (choice)
-            {
-                case 1: _recruiters.AddRecruiter(); break;
-                case 2: _recruiters.UpdateRecruiter(); break;
-                case 3: _recruiters.ListRecruiter(); break;
-                case 4: _recruiters.RemoveRecruiter(); break;
-                case 5: UserInput(); break;
-            }
-        }
-
-        public static void JobMenu()
-        {
-            SubMenu("========== Job View ==========");
-
-            int choice = Validator.IntValidation("enter your choice: ", 1, 5);
-            switch (choice)
-            {
-                case 1: _jobs.AddJob(); break;
-                case 2: _jobs.UpdateJob(); break;
-                case 3: _jobs.ListJob(); break;
-                case 4: _jobs.RemoveJob(); break;
-                case 5: UserInput(); break;
-            }
-        }
-
-        public static void CandidateMenu()
-        {
-            SubMenu("========== Candidate View ==========");
-
-            int choice = Validator.IntValidation("enter your choice: ", 1, 5);
-            switch (choice)
-            {
-                case 1: _candidates.AddCandidate(); break;
-                case 2: _candidates.UpdateCandidate(); break;
-                case 3: _candidates.ListCandidate(); break;
-                case 4: _candidates.RemoveCandidate(); break;
-                case 5: UserInput(); break;
-            }
-        }
-
-        public  static void ApplicationMenu()
-        {
-            Console.Clear();
-            Console.WriteLine("========== Application View ==========");
-        }
-
-        public static void SubMenu(string title)
-        {
-            Console.Clear();
-            Console.WriteLine(title);
-            Console.WriteLine(@"1] Add
-2] Update
-3] List
-4] Remove
-5] Back");
-        }
-
-        // prevent any recursive calls from the main menu to any other menu
-        static void Exit()
-        {
-            Process.GetCurrentProcess().Kill();
         }
     }
 }

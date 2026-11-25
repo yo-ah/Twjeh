@@ -19,7 +19,7 @@ namespace JobApplicationTracker.Services
                 return;
             }
 
-            item.Id = NextID();
+            if(item.Id == 0) item.Id = NextID();
             _items.Add(item);
         }
 
@@ -47,7 +47,7 @@ namespace JobApplicationTracker.Services
             T? item = GetByID(id);
             if(item is null)
             {
-                Console.WriteLine("this id already exist");
+                Console.WriteLine("this id doesn't exist");
                 return;
             }
             _items.Remove(item);
